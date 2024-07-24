@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { Timer } from 'three/addons/misc/Timer.js'
 import GUI from 'lil-gui'
 import { depth, metalness, roughness } from 'three/examples/jsm/nodes/Nodes.js'
+import { Sky } from 'three/examples/jsm/Addons.js'
 
 /**
  * Base
@@ -55,7 +56,6 @@ wallColorTexture.colorSpace=THREE.SRGBColorSpace
 const bushColorTexture = textureLoader.load('./floor/bushes/color.jpg')
 const bushARMTexture = textureLoader.load('./floor/bushes/arm.jpg')
 const bushNormalTexture = textureLoader.load('./floor/bushes/normal.jpg')
-const bushDisplacementTexture = textureLoader.load('./floor/bushes/displacemnt.jpg')
 
 bushColorTexture.colorSpace=THREE.SRGBColorSpace
 
@@ -78,7 +78,6 @@ roofNormalTexture.wrapS = THREE.RepeatWrapping
 const graveColorTexture = textureLoader.load('./floor/grave/color.jpg')
 const graveARMTexture = textureLoader.load('./floor/grave/arm.jpg')
 const graveNormalTexture = textureLoader.load('./floor/grave/normal.jpg')
-const graveDisplacementTexture = textureLoader.load('./floor/grave/displacemnt.jpg')
 
 graveColorTexture.colorSpace=THREE.SRGBColorSpace
 
@@ -185,6 +184,10 @@ const bushGeometry =new THREE.SphereGeometry(1,16,16)
 const bushMaterial = new THREE.MeshStandardMaterial({
     color:'#ccffcc',
     map:bushColorTexture,
+    aoMap:bushARMTexture,
+    roughnessMap:bushARMTexture,
+    metalnessMap:bushARMTexture,
+    normalMap:bushNormalTexture
      
 })
 
@@ -244,6 +247,22 @@ const ghost2 = new THREE.PointLight('#ff0088', 6)
 const ghost3 = new THREE.PointLight('#ff0000', 6)
 scene.add(ghost1, ghost2, ghost3)
 
+//sky
+const sky = new Sky()
+sky.scale.set(100,100,100)
+scene.add(sky)
+
+sky.material.uniforms['turbidity'].value=10
+sky.material.uniforms['rayleigh'].value=3
+sky.material.uniforms['mieCoefficient'].value=0.1
+sky.material.uniforms['mieDirectionalG'].value=0.95
+sky.material.uniforms['sunPosition'].value.set(0.3,-0.038,-0.95)
+
+//fog
+scene.fog = new THREE.FogExp2('#02343f',0.1)
+//scene.scene=new THREE.Fog('#02343f',10,13)
+
+
 /**
  * Lights
  */
@@ -302,6 +321,49 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
+//shadows
+renderer.shadowMap.enabled=true
+renderer.shadowMap.type=THREE.PCFSoftShadowMap
+
+directionalLight.castShadow=true
+ghost1.castShadow=true
+ghost2.castShadow=true
+ghost3.castShadow=true
+
+walls.castShadow=true
+walls.receiveShadow=true
+roof.castShadow=true
+floor.receiveShadow=true
+
+for(const grave of graves.children){
+    grave.castShadow=true
+    grave.receiveShadow=true
+}
+
+//mappings
+directionalLight.shadow.mapSize.width=256
+directionalLight.shadow.mapSize.height=256
+directionalLight.shadow.camera.top=8
+directionalLight.shadow.camera.right=8
+directionalLight.shadow.camera.bottom=-8
+directionalLight.shadow.camera.left=-8
+directionalLight.shadow.camera.near=1
+directionalLight.shadow.camera.far=20
+
+ghost1.shadow.mapSize.width=256
+ghost1.shadow.mapSize.height=256
+ghost1.shadow.camera.far=10
+
+ghost2.shadow.mapSize.width=256
+ghost2.shadow.mapSize.height=256
+ghost2.shadow.camera.far=10
+
+ghost3.shadow.mapSize.width=256
+ghost3.shadow.mapSize.height=256
+ghost3.shadow.camera.far=10
+
+
+
 /**
  * Animate
  */
@@ -312,6 +374,22 @@ const tick = () =>
     // Timer
     timer.update()
     const elapsedTime = timer.getElapsed()
+
+    //ghost
+    const ghost1Angle = elapsedTime*0.5
+    ghost1.position.x=Math.cos(ghost1Angle)*4
+    ghost1.position.z=Math.sin(ghost1Angle)*4
+    ghost1.position.y=Math.sin(ghost1Angle*2.34)*Math.sin(ghost1Angle*2.34)
+
+    const ghost2Angle = - elapsedTime*0.38
+    ghost2.position.x=Math.cos(ghost2Angle)*5
+    ghost2.position.z=Math.sin(ghost2Angle)*5
+    ghost2.position.y=Math.sin(ghost2Angle*2.34)*Math.sin(ghost2Angle*2.34)
+
+    const ghost3Angle = elapsedTime*0.23
+    ghost3.position.x=Math.cos(ghost3Angle)*6
+    ghost3.position.z=Math.sin(ghost3Angle)*6
+    ghost3.position.y=Math.sin(ghost3Angle*2.34)*Math.sin(ghost3Angle*2.34)
 
     // Update controls
     controls.update()
